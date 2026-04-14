@@ -3,7 +3,6 @@
  */
 
 //% color=#2E86DE icon="\uf085" block="HUSKYLENS2"
-//% groups=['Setup', 'Erkennung', 'Werte', 'Sonstiges']
 namespace huskylens2 {
     const HEADER = 0x55
     const HEADER2 = 0xAA
@@ -32,15 +31,10 @@ namespace huskylens2 {
     }
 
     export enum BasePropertyId {
-        //% block="ID"
         Id = 0,
-        //% block="X-Mitte"
         XCenter = 1,
-        //% block="Y-Mitte"
         YCenter = 2,
-        //% block="Breite"
         Width = 3,
-        //% block="Höhe"
         Height = 4
     }
 
@@ -67,14 +61,18 @@ namespace huskylens2 {
     }
 
     function readPacket(maxLen: number = 32): Buffer {
-        return pins.i2cReadBuffer(i2cAddr, maxLen, false)
+        const buf = pins.i2cReadBuffer(i2cAddr, maxLen, false)
+        return buf
     }
 
     function parseFirstBlock(buf: Buffer): boolean {
+        // Minimal parser for a single block result.
+        // Format differs by firmware; this parser targets standard HUSKYLENS block fields.
         if (buf.length < 20) return false
 
         for (let i = 0; i < buf.length - 12; i++) {
             if (buf[i] == HEADER && buf[i + 1] == HEADER2 && buf[i + 2] == ADDRESS) {
+                // heuristic parse positions
                 centerResult[BasePropertyId.XCenter] = buf[i + 6] | (buf[i + 7] << 8)
                 centerResult[BasePropertyId.YCenter] = buf[i + 8] | (buf[i + 9] << 8)
                 centerResult[BasePropertyId.Width] = buf[i + 10] | (buf[i + 11] << 8)
@@ -90,7 +88,6 @@ namespace huskylens2 {
     /**
      * Initialisiert HUSKYLENS 2 über I2C (Standardadresse 0x32).
      */
-    //% group="Setup"
     //% block="HUSKYLENS2 I2C initialisieren (Adresse $addr)"
     //% addr.min=1 addr.max=127 addr.defl=0x32
     export function I2CInit(addr: number = DEFAULT_I2C_ADDR) {
@@ -102,7 +99,6 @@ namespace huskylens2 {
     /**
      * Testet die Verbindung zu HUSKYLENS 2.
      */
-    //% group="Setup"
     //% block="HUSKYLENS2 Verbindung testen"
     export function knock(): boolean {
         writeCommand(0x2C)
@@ -114,7 +110,6 @@ namespace huskylens2 {
     /**
      * Wechselt den Algorithmus in HUSKYLENS 2.
      */
-    //% group="Setup"
     //% block="HUSKYLENS2 Algorithmus $algo wählen"
     export function switchAlgorithm(algo: Algorithm) {
         const p = pins.createBuffer(2)
@@ -127,69 +122,31 @@ namespace huskylens2 {
     /**
      * Holt Ergebnisse der aktuellen Erkennung.
      */
-    //% group="Erkennung"
     //% block="HUSKYLENS2 Ergebnisse aktualisieren"
     export function request() {
         writeCommand(0x20)
         basic.pause(30)
         const resp = readPacket(32)
-        lastCount = parseFirstBlock(resp) ? 1 : 0
+        if (parseFirstBlock(resp)) {
+            lastCount = 1
+        } else {
+            lastCount = 0
+        }
     }
 
     /**
      * Gibt zurück, ob mindestens ein Objekt erkannt wurde.
      */
-    //% group="Erkennung"
     //% block="HUSKYLENS2 Objekt erkannt"
     export function available(): boolean {
         return lastCount > 0
     }
 
     /**
-     * Anzahl erkannter Objekte (0 oder 1 in dieser kompakten Implementierung).
-     */
-    //% group="Erkennung"
-    //% block="HUSKYLENS2 Anzahl Objekte"
-    export function objectCount(): number {
-        return lastCount
-    }
-
-    /**
      * Liefert Eigenschaften des ersten erkannten Objekts.
      */
-    //% group="Werte"
     //% block="HUSKYLENS2 Eigenschaft $property"
     export function cachedCenterResult(property: BasePropertyId): number {
         return centerResult[property]
-    }
-
-    //% group="Werte"
-    //% block="HUSKYLENS2 ID"
-    export function id(): number {
-        return cachedCenterResult(BasePropertyId.Id)
-    }
-
-    //% group="Werte"
-    //% block="HUSKYLENS2 X-Mitte"
-    export function xCenter(): number {
-        return cachedCenterResult(BasePropertyId.XCenter)
-    }
-
-    //% group="Werte"
-    //% block="HUSKYLENS2 Y-Mitte"
-    export function yCenter(): number {
-        return cachedCenterResult(BasePropertyId.YCenter)
-    }
-
-    //% group="Werte"
-    //% block="HUSKYLENS2 Breite"
-    export function width(): number {
-        return cachedCenterResult(BasePropertyId.Width)
-    }
-
-    //% group="Werte"
-    //% block="HUSKYLENS2 Höhe"
-    export function height(): number {
-        return cachedCenterResult(BasePropertyId.Height)
     }
 }
