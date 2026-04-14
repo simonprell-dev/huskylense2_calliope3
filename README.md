@@ -3,11 +3,154 @@
 Dies ist eine schlanke MakeCode-Erweiterung für **HUSKYLENS 2** mit Fokus auf
 **Calliope mini 3** (I2C).
 
-## Was wurde gegenüber dem Original angepasst?
+## Installation in MakeCode (Calliope) – ausführlich
 
-- `targetId` und `supportedTargets` sind auf `calliopemini` gesetzt.
-- API und Blocknamen sind auf Calliope/MakeCode-Nutzung abgestimmt.
-- Fokus auf robuste I2C-Basisfunktionen (`I2CInit`, `knock`, `switchAlgorithm`, `request`).
+### A) Erweiterung in ein MakeCode-Projekt einbinden
+
+1. Öffne den Editor: **https://makecode.calliope.cc/**
+2. Klicke auf **Neues Projekt**.
+3. Öffne links den Bereich **Erweitert**.
+4. Wähle **Erweiterungen**.
+5. In das Feld **„Search or enter project URL…“** die Repository-URL einfügen:
+   - `https://github.com/<DEIN-ACCOUNT>/huskylense2_calliope3`
+6. Mit **Enter** bestätigen und die Erweiterung anklicken.
+7. Danach findest du die neuen Blöcke in der Kategorie **HUSKYLENS2**.
+
+### B) Programm auf den Calliope mini 3 übertragen
+
+1. Verbinde den Calliope mini 3 per USB mit dem Computer.
+2. Klicke in MakeCode auf **Herunterladen**.
+3. Die Datei wird erzeugt (je nach Browser direkt gespeichert).
+4. Falls nötig: Datei auf das Laufwerk des Calliope kopieren.
+5. Nach dem Kopieren startet das Programm auf dem Board.
+
+### C) HUSKYLENS 2 korrekt vorbereiten
+
+1. HUSKYLENS auf **I2C-Modus** stellen.
+2. Verdrahtung prüfen (VCC, GND, SDA, SCL).
+3. In MakeCode zuerst immer den Block **„HUSKYLENS2 I2C initialisieren“** aufrufen.
+4. Danach mit **„Verbindung testen“** prüfen, ob Sensor antwortet.
+
+> Hinweis: Für lokale Tests in einem Fork/Branch muss die URL auf dein tatsächliches
+> GitHub-Repository zeigen.
+
+## Verfügbare Blöcke (Deutsch)
+
+- **Setup**: `I2C initialisieren`, `Verbindung testen`, `Algorithmus wählen`
+- **Erkennung**: `Ergebnisse aktualisieren`, `Objekt erkannt`, `Anzahl Objekte`
+- **Werte**: `Eigenschaft`, `ID`, `X-Mitte`, `Y-Mitte`, `Breite`, `Höhe`
+
+## 5 Beispielprogramme zum Download
+
+> Alle Beispiele sind als `.ts` im Ordner `beispiele/` hinterlegt und können direkt heruntergeladen werden.
+
+### 1) Hallo Welt (ohne Kamera-Logik)
+
+**Datei:** [beispiele/01_hallo_welt.ts](beispiele/01_hallo_welt.ts)
+
+**Was passiert?**
+- Zeigt „Hallo Welt“ und prüft, ob die HUSKYLENS-Verbindung grundsätzlich antwortet.
+
+**Blockansicht (vereinfacht):**
+
+```text
+beim Start
+  HUSKYLENS2 I2C initialisieren
+  wenn HUSKYLENS2 Verbindung testen
+    zeige Text "Hallo Welt"
+  sonst
+    zeige Symbol Nein
+```
+
+---
+
+### 2) Verbindungstest mit Statusanzeige
+
+**Datei:** [beispiele/02_verbindungstest.ts](beispiele/02_verbindungstest.ts)
+
+**Was passiert?**
+- Prüft zyklisch die Verbindung und zeigt per LED-Symbol den Status an.
+
+**Blockansicht (vereinfacht):**
+
+```text
+dauerhaft
+  wenn HUSKYLENS2 Verbindung testen
+    zeige Symbol Ja
+  sonst
+    zeige Symbol Nein
+```
+
+---
+
+### 3) Gesicht erkannt? + ID ausgeben
+
+**Datei:** [beispiele/03_gesicht_erkennen.ts](beispiele/03_gesicht_erkennen.ts)
+
+**Was passiert?**
+- Schaltet auf Gesichtserkennung, fragt Ergebnisse ab und sendet ID/X/Y seriell.
+
+**Blockansicht (vereinfacht):**
+
+```text
+beim Start
+  I2C initialisieren
+  Algorithmus Gesichtserkennung wählen
+
+dauerhaft
+  Ergebnisse aktualisieren
+  wenn Objekt erkannt
+    schreibe ID, X-Mitte, Y-Mitte an seriell
+```
+
+---
+
+### 4) Farbtracking Rot (Objektmitte verfolgen)
+
+**Datei:** [beispiele/04_farb_tracking_rot.ts](beispiele/04_farb_tracking_rot.ts)
+
+**Was passiert?**
+- Nutzt Farb-Erkennung und zeigt an, ob das rote Objekt links, mittig oder rechts ist.
+
+**Blockansicht (vereinfacht):**
+
+```text
+dauerhaft
+  Ergebnisse aktualisieren
+  wenn Objekt erkannt
+    wenn X-Mitte < 110 -> zeige Pfeil links
+    wenn 110..210 -> zeige Quadrat
+    wenn > 210 -> zeige Pfeil rechts
+```
+
+---
+
+### 5) Folge dem roten LEGO-Stein (mit Trainingshinweis)
+
+**Datei:** [beispiele/05_folge_roten_lego_stein.ts](beispiele/05_folge_roten_lego_stein.ts)
+
+**Was passiert?**
+- Nutzt Farb-Erkennung + X-Mitte, um ein einfaches Links/Rechts/Gerade-Verhalten für Motorlogik abzuleiten.
+- Enthält Platzhalter-Funktionen für die Motorsteuerung (`fahreGerade`, `dreheLinks`, `dreheRechts`, `stopp`).
+
+**So trainierst du HUSKYLENS für den roten LEGO-Stein:**
+1. Algorithmus **Farb-Erkennung** am HUSKYLENS wählen.
+2. Mehrfach den roten LEGO-Stein in unterschiedlichen Abständen/Beleuchtungen markieren.
+3. Speichern/lernen bestätigen (je nach HUSKYLENS-Menüführung).
+4. Testen, ob der Stein stabil als Ziel erkannt wird.
+
+**Blockansicht (vereinfacht):**
+
+```text
+dauerhaft
+  Ergebnisse aktualisieren
+  wenn Objekt erkannt
+    wenn X-Mitte < linksSchwelle -> dreheLinks
+    wenn X-Mitte > rechtsSchwelle -> dreheRechts
+    sonst -> fahreGerade
+  sonst
+    stopp
+```
 
 ## Schnellstart
 
