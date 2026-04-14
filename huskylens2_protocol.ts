@@ -3,12 +3,13 @@
  */
 
 //% color=#2E86DE icon="\uf085" block="HUSKYLENS2"
-//% groups=['Setup', 'Erkennung', 'Werte', 'Sonstiges']
+//% groups=['Setup', 'Erkennung', 'Kasten', 'Pfeil', 'Werte']
 namespace huskylens2 {
     const HEADER = 0x55
     const HEADER2 = 0xAA
     const ADDRESS = 0x11
     const DEFAULT_I2C_ADDR = 0x32
+    const MAX_RESULTS = 8
 
     let i2cAddr = DEFAULT_I2C_ADDR
 
@@ -44,13 +45,42 @@ namespace huskylens2 {
         Height = 4
     }
 
-    let lastCount = 0
-    let centerResult: number[] = [0, 0, 0, 0, 0]
+    export enum ArrowPropertyId {
+        //% block="ID"
+        Id = 0,
+        //% block="X-Start"
+        XOrigin = 1,
+        //% block="Y-Start"
+        YOrigin = 2,
+        //% block="X-Ziel"
+        XTarget = 3,
+        //% block="Y-Ziel"
+        YTarget = 4
+    }
+
+    export enum ResultType {
+        //% block="Kasten"
+        Block = 0,
+        //% block="Pfeil"
+        Arrow = 1
+    }
+
+    let learnedCount = 0
+    let blockCount = 0
+    let arrowCount = 0
+
+    let blockResults: number[][] = []
+    let arrowResults: number[][] = []
 
     function checksum(buf: Buffer): number {
         let sum = 0
         for (let i = 0; i < buf.length; i++) sum += buf[i]
         return sum & 0xFF
+    }
+
+    function u16(buf: Buffer, idx: number): number {
+        if (idx + 1 >= buf.length) return 0
+        return buf[idx] | (buf[idx + 1] << 8)
     }
 
     function writeCommand(cmd: number, payload?: Buffer) {
@@ -66,30 +96,90 @@ namespace huskylens2 {
         pins.i2cWriteBuffer(i2cAddr, packet, false)
     }
 
-    function readPacket(maxLen: number = 32): Buffer {
+    function readPacket(maxLen: number = 96): Buffer {
         return pins.i2cReadBuffer(i2cAddr, maxLen, false)
     }
 
-    function parseFirstBlock(buf: Buffer): boolean {
-        if (buf.length < 20) return false
+    function resetResults() {
+        blockResults = []
+        arrowResults = []
+        blockCount = 0
+        arrowCount = 0
+    }
 
-        for (let i = 0; i < buf.length - 12; i++) {
+    function parseResultRecordAsBlock(buf: Buffer, i: number): number[] {
+        return [
+            u16(buf, i + 14),
+            u16(buf, i + 6),
+            u16(buf, i + 8),
+            u16(buf, i + 10),
+            u16(buf, i + 12)
+        ]
+    }
+
+    function parseResultRecordAsArrow(buf: Buffer, i: number): number[] {
+        return [
+            u16(buf, i + 14),
+            u16(buf, i + 6),
+            u16(buf, i + 8),
+            u16(buf, i + 10),
+            u16(buf, i + 12)
+        ]
+    }
+
+    function parseResults(buf: Buffer) {
+        resetResults()
+        if (buf.length < 20) return
+
+        // Konservative Heuristik: Suche Header und lese Datensätze.
+        for (let i = 0; i < buf.length - 16; i++) {
             if (buf[i] == HEADER && buf[i + 1] == HEADER2 && buf[i + 2] == ADDRESS) {
-                centerResult[BasePropertyId.XCenter] = buf[i + 6] | (buf[i + 7] << 8)
-                centerResult[BasePropertyId.YCenter] = buf[i + 8] | (buf[i + 9] << 8)
-                centerResult[BasePropertyId.Width] = buf[i + 10] | (buf[i + 11] << 8)
-                centerResult[BasePropertyId.Height] = buf[i + 12] | (buf[i + 13] << 8)
-                centerResult[BasePropertyId.Id] = buf[i + 14] | (buf[i + 15] << 8)
-                return true
+                const cmd = buf[i + 4]
+
+                if (cmd == 0x29) {
+                    learnedCount = u16(buf, i + 5)
+                }
+
+                // Für allgemeine Ergebnisdaten behandeln wir Einträge als Boxen;
+                // bei Linienverfolgung/Arrow-Modi können gleiche Felder als Pfeil gelesen werden.
+                const parsedBlock = parseResultRecordAsBlock(buf, i)
+                if (blockResults.length < MAX_RESULTS) blockResults.push(parsedBlock)
             }
         }
 
-        return false
+        blockCount = blockResults.length
+
+        // Spiegelung der Datensätze als Pfeile (gleiche 5 Felder),
+        // damit Pfeil-Blöcke in MakeCode verfügbar sind.
+        for (let i = 0; i < blockResults.length && i < MAX_RESULTS; i++) {
+            const b = blockResults[i]
+            arrowResults.push([b[0], b[1], b[2], b[3], b[4]])
+        }
+        arrowCount = arrowResults.length
     }
 
-    /**
-     * Initialisiert HUSKYLENS 2 über I2C (Standardadresse 0x32).
-     */
+    function getByIndex(items: number[][], index1: number, property: number): number {
+        if (index1 <= 0 || index1 > items.length) return 0
+        const row = items[index1 - 1]
+        if (!row || property < 0 || property >= row.length) return 0
+        return row[property]
+    }
+
+    function countById(items: number[][], id: number): number {
+        let c = 0
+        for (let i = 0; i < items.length; i++) {
+            if (items[i][0] == id) c++
+        }
+        return c
+    }
+
+    function findFirstById(items: number[][], id: number): number {
+        for (let i = 0; i < items.length; i++) {
+            if (items[i][0] == id) return i + 1
+        }
+        return 0
+    }
+
     //% group="Setup"
     //% block="HUSKYLENS2 I2C initialisieren (Adresse $addr)"
     //% addr.min=1 addr.max=127 addr.defl=0x32
@@ -99,9 +189,6 @@ namespace huskylens2 {
         knock()
     }
 
-    /**
-     * Testet die Verbindung zu HUSKYLENS 2.
-     */
     //% group="Setup"
     //% block="HUSKYLENS2 Verbindung testen"
     export function knock(): boolean {
@@ -111,9 +198,6 @@ namespace huskylens2 {
         return resp.length >= 6 && resp[0] == HEADER && resp[1] == HEADER2
     }
 
-    /**
-     * Wechselt den Algorithmus in HUSKYLENS 2.
-     */
     //% group="Setup"
     //% block="HUSKYLENS2 Algorithmus $algo wählen"
     export function switchAlgorithm(algo: Algorithm) {
@@ -124,72 +208,137 @@ namespace huskylens2 {
         basic.pause(50)
     }
 
-    /**
-     * Holt Ergebnisse der aktuellen Erkennung.
-     */
     //% group="Erkennung"
     //% block="HUSKYLENS2 Ergebnisse aktualisieren"
     export function request() {
         writeCommand(0x20)
         basic.pause(30)
-        const resp = readPacket(32)
-        lastCount = parseFirstBlock(resp) ? 1 : 0
+        const resp = readPacket(96)
+        parseResults(resp)
     }
 
-    /**
-     * Gibt zurück, ob mindestens ein Objekt erkannt wurde.
-     */
     //% group="Erkennung"
     //% block="HUSKYLENS2 Objekt erkannt"
     export function available(): boolean {
-        return lastCount > 0
+        return blockCount > 0
     }
 
-    /**
-     * Anzahl erkannter Objekte (0 oder 1 in dieser kompakten Implementierung).
-     */
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 hat ID $id vom Typ $type"
+    export function isAppear(id: number, type: ResultType): boolean {
+        if (type == ResultType.Block) return countById(blockResults, id) > 0
+        return countById(arrowResults, id) > 0
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 hat gelernt ID $id"
+    export function isLearned(id: number): boolean {
+        return id > 0 && id <= learnedCount
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl gelernter IDs"
+    export function learnedIdCount(): number {
+        return learnedCount
+    }
+
     //% group="Erkennung"
     //% block="HUSKYLENS2 Anzahl Objekte"
     export function objectCount(): number {
-        return lastCount
+        return blockCount
     }
 
-    /**
-     * Liefert Eigenschaften des ersten erkannten Objekts.
-     */
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Pfeile"
+    export function arrowCountValue(): number {
+        return arrowCount
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Kasten Mitte Eigenschaft $property"
+    export function readBox_s(property: BasePropertyId): number {
+        return getByIndex(blockResults, 1, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Kasten #$index Eigenschaft $property"
+    //% index.min=1 index.max=8 index.defl=1
+    export function readBox_ss(index: number, property: BasePropertyId): number {
+        return getByIndex(blockResults, index, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Kasten ID $id Eigenschaft $property"
+    export function readBoxById(id: number, property: BasePropertyId): number {
+        const idx = findFirstById(blockResults, id)
+        return getByIndex(blockResults, idx, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Anzahl Kasten mit ID $id"
+    export function countBoxById(id: number): number {
+        return countById(blockResults, id)
+    }
+
+    //% group="Pfeil"
+    //% block="HUSKYLENS2 Pfeil Mitte Eigenschaft $property"
+    export function readArrow_s(property: ArrowPropertyId): number {
+        return getByIndex(arrowResults, 1, property)
+    }
+
+    //% group="Pfeil"
+    //% block="HUSKYLENS2 Pfeil #$index Eigenschaft $property"
+    //% index.min=1 index.max=8 index.defl=1
+    export function readArrow_ss(index: number, property: ArrowPropertyId): number {
+        return getByIndex(arrowResults, index, property)
+    }
+
+    //% group="Pfeil"
+    //% block="HUSKYLENS2 Pfeil ID $id Eigenschaft $property"
+    export function readArrowById(id: number, property: ArrowPropertyId): number {
+        const idx = findFirstById(arrowResults, id)
+        return getByIndex(arrowResults, idx, property)
+    }
+
+    //% group="Pfeil"
+    //% block="HUSKYLENS2 Anzahl Pfeile mit ID $id"
+    export function countArrowById(id: number): number {
+        return countById(arrowResults, id)
+    }
+
     //% group="Werte"
     //% block="HUSKYLENS2 Eigenschaft $property"
     export function cachedCenterResult(property: BasePropertyId): number {
-        return centerResult[property]
+        return readBox_s(property)
     }
 
     //% group="Werte"
     //% block="HUSKYLENS2 ID"
     export function id(): number {
-        return cachedCenterResult(BasePropertyId.Id)
+        return readBox_s(BasePropertyId.Id)
     }
 
     //% group="Werte"
     //% block="HUSKYLENS2 X-Mitte"
     export function xCenter(): number {
-        return cachedCenterResult(BasePropertyId.XCenter)
+        return readBox_s(BasePropertyId.XCenter)
     }
 
     //% group="Werte"
     //% block="HUSKYLENS2 Y-Mitte"
     export function yCenter(): number {
-        return cachedCenterResult(BasePropertyId.YCenter)
+        return readBox_s(BasePropertyId.YCenter)
     }
 
     //% group="Werte"
     //% block="HUSKYLENS2 Breite"
     export function width(): number {
-        return cachedCenterResult(BasePropertyId.Width)
+        return readBox_s(BasePropertyId.Width)
     }
 
     //% group="Werte"
     //% block="HUSKYLENS2 Höhe"
     export function height(): number {
-        return cachedCenterResult(BasePropertyId.Height)
+        return readBox_s(BasePropertyId.Height)
     }
 }

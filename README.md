@@ -34,10 +34,24 @@ Dies ist eine schlanke MakeCode-Erweiterung für **HUSKYLENS 2** mit Fokus auf
 > Hinweis: Für lokale Tests in einem Fork/Branch muss die URL auf dein tatsächliches
 > GitHub-Repository zeigen.
 
+
+### D) Noch einfacher: über .hex importieren
+
+Wenn du bereits ein fertiges Calliope-Projekt mit dieser Erweiterung hast:
+
+1. In MakeCode auf **Importieren** klicken.
+2. **Datei importieren** wählen.
+3. Eine passende `.hex`-Datei auswählen (z. B. von Lehrkraft/Team).
+4. MakeCode lädt dann Projekt **inkl. Erweiterung** automatisch.
+
+Damit sparst du dir das manuelle Hinzufügen der URL in vielen Unterrichtsszenarien.
+
 ## Verfügbare Blöcke (Deutsch)
 
 - **Setup**: `I2C initialisieren`, `Verbindung testen`, `Algorithmus wählen`
-- **Erkennung**: `Ergebnisse aktualisieren`, `Objekt erkannt`, `Anzahl Objekte`
+- **Erkennung**: `Ergebnisse aktualisieren`, `Objekt erkannt`, `hat ID ... vom Typ ...`, `hat gelernt ID ...`, `Anzahl gelernter IDs`, `Anzahl Objekte`, `Anzahl Pfeile`
+- **Kasten**: `Kasten Mitte Eigenschaft`, `Kasten # Eigenschaft`, `Kasten ID Eigenschaft`, `Anzahl Kasten mit ID`
+- **Pfeil**: `Pfeil Mitte Eigenschaft`, `Pfeil # Eigenschaft`, `Pfeil ID Eigenschaft`, `Anzahl Pfeile mit ID`
 - **Werte**: `Eigenschaft`, `ID`, `X-Mitte`, `Y-Mitte`, `Breite`, `Höhe`
 
 ## 5 Beispielprogramme zum Download
@@ -151,11 +165,6 @@ dauerhaft
   sonst
     stopp
 ```
-## Was wurde gegenüber dem Original angepasst?
-
-- `targetId` und `supportedTargets` sind auf `calliopemini` gesetzt.
-- API und Blocknamen sind auf Calliope/MakeCode-Nutzung abgestimmt.
-- Fokus auf robuste I2C-Basisfunktionen (`I2CInit`, `knock`, `switchAlgorithm`, `request`).
 
 ## Schnellstart
 
