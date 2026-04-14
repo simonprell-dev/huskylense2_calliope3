@@ -53,6 +53,9 @@ Damit sparst du dir das manuelle Hinzufügen der URL in vielen Unterrichtsszenar
 - **Kasten**: `Kasten Mitte Eigenschaft`, `Kasten # Eigenschaft`, `Kasten ID Eigenschaft`, `Anzahl Kasten mit ID`
 - **Pfeil**: `Pfeil Mitte Eigenschaft`, `Pfeil # Eigenschaft`, `Pfeil ID Eigenschaft`, `Anzahl Pfeile mit ID`
 - **Werte**: `Eigenschaft`, `ID`, `X-Mitte`, `Y-Mitte`, `Breite`, `Höhe`
+- **Kompatibilität (DFRobot V2)**: zusätzliche Alias-Blöcke für Face/Object/Color/ObjectTracking inkl. `getResult...`, `available...`, `cachedResultNum...`, `cachedCenter...`, `...IdExists`, `total...ById`, `...PropertyById`, `...PropertyByIdNth`
+
+> Hinweis zur API-Abdeckung: Die grundlegenden DFRobot-V2-Workflows für Gesicht, Objekt, Farbe und Tracking sind als Calliope-kompatible Alias-Blöcke vorhanden. Sehr spezialisierte Unterkategorien (z. B. OCR/Barcode/QR/Face-Orientation/Fall Detection) sind in dieser schlanken Portierung weiterhin nicht vollständig implementiert.
 
 ## 5 Beispielprogramme zum Download
 
