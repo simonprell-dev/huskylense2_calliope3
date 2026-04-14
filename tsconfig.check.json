@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "none",
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true
+  },
+  "files": [
+    "makecode-shims.d.ts",
+    "huskylens2_protocol.ts",
+    "test.ts",
+    "beispiele/01_hallo_welt.ts",
+    "beispiele/02_verbindungstest.ts",
+    "beispiele/03_gesicht_erkennen.ts",
+    "beispiele/04_farb_tracking_rot.ts",
+    "beispiele/05_folge_roten_lego_stein.ts"
+  ]
+}
