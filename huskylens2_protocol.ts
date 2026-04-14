@@ -16,25 +16,49 @@ namespace huskylens2 {
     export enum Algorithm {
         //% block="Gesichtserkennung"
         FaceRecognition = 0,
+        //% blockHidden=true
+        AlgorithmFaceRecognition = FaceRecognition,
         //% block="Objektverfolgung"
         ObjectTracking = 1,
+        //% blockHidden=true
+        AlgorithmObjectTracking = ObjectTracking,
         //% block="Objekterkennung"
         ObjectRecognition = 2,
+        //% blockHidden=true
+        AlgorithmObjectRecognition = ObjectRecognition,
         //% block="Linienverfolgung"
         LineTracking = 3,
+        //% blockHidden=true
+        AlgorithmLineTracking = LineTracking,
         //% block="Farb-Erkennung"
         ColorRecognition = 4,
+        //% blockHidden=true
+        AlgorithmColorRecognition = ColorRecognition,
         //% block="Tag-Erkennung"
         TagRecognition = 5,
+        //% blockHidden=true
+        AlgorithmTagRecognition = TagRecognition,
         //% block="Objektklassifikation"
         ObjectClassification = 6,
+        //% blockHidden=true
+        AlgorithmObjectClassification = ObjectClassification,
         //% block="Pose-Erkennung"
-        PoseRecognition = 7
+        PoseRecognition = 7,
+        //% blockHidden=true
+        AlgorithmPoseRecognition = PoseRecognition,
+        //% blockHidden=true
+        AlgorithmSelfLearningClassification = 8,
+        //% blockHidden=true
+        AlgorithmSegment = 9,
+        //% blockHidden=true
+        AlgorithmHandRecognition = 10
     }
 
     export enum BasePropertyId {
         //% block="ID"
         Id = 0,
+        //% block="Name"
+        Name = 5,
         //% block="X-Mitte"
         XCenter = 1,
         //% block="Y-Mitte"
@@ -178,6 +202,18 @@ namespace huskylens2 {
             if (items[i][0] == id) return i + 1
         }
         return 0
+    }
+
+    function getNthById(items: number[][], id: number, nthIndex1: number): number[] {
+        if (nthIndex1 <= 0) return null
+        let seen = 0
+        for (let i = 0; i < items.length; i++) {
+            if (items[i][0] == id) {
+                seen++
+                if (seen == nthIndex1) return items[i]
+            }
+        }
+        return null
     }
 
     //% group="Setup"
@@ -340,5 +376,274 @@ namespace huskylens2 {
     //% block="HUSKYLENS2 Höhe"
     export function height(): number {
         return readBox_s(BasePropertyId.Height)
+    }
+
+    // --- Kompatibilitätsblöcke zum DFRobot-Referenzprojekt ---
+    // Face Recognition
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Gesichtserkennung Ergebnis holen"
+    export function getResultFaceRecognition(): void {
+        switchAlgorithm(Algorithm.FaceRecognition)
+        request()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Gesicht erkannt?"
+    export function availableFaceRecognition(): boolean {
+        return available()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Gesichter"
+    export function cachedResultNumFace(): number {
+        return objectCount()
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Gesicht nahe Mitte $property"
+    export function cachedCenterFaceResult(property: BasePropertyId): number {
+        return readBox_s(property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Gesicht #$index Eigenschaft $property"
+    //% index.min=1 index.max=8 index.defl=1
+    export function cachedResultFaceProperty(index: number, property: BasePropertyId): number {
+        return readBox_ss(index, property)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl gelernter Gesichts-IDs"
+    export function totalLearnedFaceIds(): number {
+        return learnedIdCount()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Gesichts-ID $id vorhanden?"
+    export function faceIdExists(id: number): boolean {
+        return isAppear(id, ResultType.Block)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Gesichter mit ID $id"
+    export function totalFaceById(id: number): number {
+        return countBoxById(id)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Gesichts-ID $id Eigenschaft $property"
+    export function facePropertyById(id: number, property: BasePropertyId): number {
+        return readBoxById(id, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Gesichts-ID $id Eintrag #$index Eigenschaft $property"
+    //% id.min=1 id.defl=1
+    //% index.min=1 index.defl=1
+    export function facePropertyByIdNth(id: number, index: number, property: BasePropertyId): number {
+        const row = getNthById(blockResults, id, index)
+        if (!row || property < 0 || property >= row.length) return 0
+        return row[property]
+    }
+
+    // Object Recognition
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Objekterkennung Ergebnis holen"
+    export function getResultObjectRecognition(): void {
+        switchAlgorithm(Algorithm.ObjectRecognition)
+        request()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Objekt erkannt? (Objekterkennung)"
+    export function availableObjectRecognition(): boolean {
+        return available()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Objekte (Objekterkennung)"
+    export function cachedResultNumObject(): number {
+        return objectCount()
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Objekt nahe Mitte $property"
+    export function cachedCenterObjectResult(property: BasePropertyId): number {
+        return readBox_s(property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Objekt #$index Eigenschaft $property"
+    //% index.min=1 index.max=8 index.defl=1
+    export function cachedResultObjectProperty(index: number, property: BasePropertyId): number {
+        return readBox_ss(index, property)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl gelernter Objekt-IDs"
+    export function totalLearnedObjectIds(): number {
+        return learnedIdCount()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Objekt-ID $id vorhanden?"
+    export function objectIdExists(id: number): boolean {
+        return isAppear(id, ResultType.Block)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Objekte mit ID $id"
+    export function totalObjectById(id: number): number {
+        return countBoxById(id)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Objekt-ID $id Eigenschaft $property"
+    export function objectPropertyById(id: number, property: BasePropertyId): number {
+        return readBoxById(id, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Objekt-ID $id Eintrag #$index Eigenschaft $property"
+    //% id.min=1 id.defl=1
+    //% index.min=1 index.defl=1
+    export function objectPropertyByIdNth(id: number, index: number, property: BasePropertyId): number {
+        const row = getNthById(blockResults, id, index)
+        if (!row || property < 0 || property >= row.length) return 0
+        return row[property]
+    }
+
+    // Color Recognition
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Farberkennung Ergebnis holen"
+    export function getResultColorRecognition(): void {
+        switchAlgorithm(Algorithm.ColorRecognition)
+        request()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Farbobjekt erkannt?"
+    export function availableColorRecognition(): boolean {
+        return available()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Farbobjekte"
+    export function cachedResultNumColor(): number {
+        return objectCount()
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Farbobjekt nahe Mitte $property"
+    export function cachedCenterColorResult(property: BasePropertyId): number {
+        return readBox_s(property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Farbobjekt #$index Eigenschaft $property"
+    //% index.min=1 index.max=8 index.defl=1
+    export function cachedResultColorProperty(index: number, property: BasePropertyId): number {
+        return readBox_ss(index, property)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl gelernter Farb-IDs"
+    export function totalLearnedColorIds(): number {
+        return learnedIdCount()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Farb-ID $id vorhanden?"
+    export function colorIdExists(id: number): boolean {
+        return isAppear(id, ResultType.Block)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Farben mit ID $id"
+    export function totalColorById(id: number): number {
+        return countBoxById(id)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Farb-ID $id Eigenschaft $property"
+    export function colorPropertyById(id: number, property: BasePropertyId): number {
+        return readBoxById(id, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Farb-ID $id Eintrag #$index Eigenschaft $property"
+    //% id.min=1 id.defl=1
+    //% index.min=1 index.defl=1
+    export function colorPropertyByIdNth(id: number, index: number, property: BasePropertyId): number {
+        const row = getNthById(blockResults, id, index)
+        if (!row || property < 0 || property >= row.length) return 0
+        return row[property]
+    }
+
+    // Object Tracking
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Objektverfolgung Ergebnis holen"
+    export function getResultObjectTracking(): void {
+        switchAlgorithm(Algorithm.ObjectTracking)
+        request()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Verfolgtes Objekt erkannt?"
+    export function availableObjectTracking(): boolean {
+        return available()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Tracking-Objekte"
+    export function cachedResultNumObjectTracking(): number {
+        return objectCount()
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Tracking-Objekt nahe Mitte $property"
+    export function cachedCenterObjectTrackingResult(property: BasePropertyId): number {
+        return readBox_s(property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Tracking-Objekt #$index Eigenschaft $property"
+    //% index.min=1 index.max=8 index.defl=1
+    export function cachedResultObjectTrackingProperty(index: number, property: BasePropertyId): number {
+        return readBox_ss(index, property)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl gelernter Tracking-IDs"
+    export function totalLearnedObjectTrackingIds(): number {
+        return learnedIdCount()
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Tracking-ID $id vorhanden?"
+    export function objectTrackingIdExists(id: number): boolean {
+        return isAppear(id, ResultType.Block)
+    }
+
+    //% group="Erkennung"
+    //% block="HUSKYLENS2 Anzahl Tracking-Objekte mit ID $id"
+    export function totalObjectTrackingById(id: number): number {
+        return countBoxById(id)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Tracking-ID $id Eigenschaft $property"
+    export function objectTrackingPropertyById(id: number, property: BasePropertyId): number {
+        return readBoxById(id, property)
+    }
+
+    //% group="Kasten"
+    //% block="HUSKYLENS2 Tracking-ID $id Eintrag #$index Eigenschaft $property"
+    //% id.min=1 id.defl=1
+    //% index.min=1 index.defl=1
+    export function objectTrackingPropertyByIdNth(id: number, index: number, property: BasePropertyId): number {
+        const row = getNthById(blockResults, id, index)
+        if (!row || property < 0 || property >= row.length) return 0
+        return row[property]
     }
 }
