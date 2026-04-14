@@ -151,6 +151,11 @@ dauerhaft
   sonst
     stopp
 ```
+## Was wurde gegenüber dem Original angepasst?
+
+- `targetId` und `supportedTargets` sind auf `calliopemini` gesetzt.
+- API und Blocknamen sind auf Calliope/MakeCode-Nutzung abgestimmt.
+- Fokus auf robuste I2C-Basisfunktionen (`I2CInit`, `knock`, `switchAlgorithm`, `request`).
 
 ## Schnellstart
 
